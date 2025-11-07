@@ -40,7 +40,7 @@ st.write("Enter Hindi text:")
 text_input = st.text_area("Text", value="नमस्ते, आप कैसे हैं?")
 
 # Replace with path to your downloaded TorchScript model
-model_path = "tts_vits_coquiai_HindiFemale.pt"
+model_path = "https://huggingface.co/SYSPIN/tts_vits_coquiai_HindiFemale/blob/main/hi_female_vits_30hrs.pt"
 model, tokenizer = load_model(model_path)
 
 if st.button("Generate Audio"):
