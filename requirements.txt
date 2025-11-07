@@ -1,6 +1,10 @@
-streamlit
-torch
-torchaudio
-chatterbox-tts
-soundfile
-numpy
+# install numpy first to avoid pkuseg build error
+numpy==1.26.4
+streamlit==1.51.0
+torch==2.3.1
+torchaudio==2.3.1
+soundfile==0.12.1
+
+# chatterbox-tts relies on pkuseg which fails to build on 3.13, 
+# so we’ll install it only if successful
+chatterbox-tts==0.1.4; python_version < "3.12"
