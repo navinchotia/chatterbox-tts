@@ -7,7 +7,7 @@ import streamlit as st
 
 
 # ---------------------- Paths ----------------------
-MODEL_DIR = "hindi_tts_model"
+MODEL_DIR = "https://huggingface.co/SYSPIN/tts_vits_coquiai_HindiFemale/resolve/main/"
 MODEL_URL = "https://huggingface.co/SYSPIN/tts_vits_coquiai_HindiFemale/resolve/main/hi_female_vits_30hrs.pt"
 MODEL_PATH = "hi_female_vits_30hrs.pt"
 CHARS_PATH = os.path.join(MODEL_DIR, "chars.txt")
