@@ -1,52 +1,58 @@
-import streamlit as st
 import os
+import streamlit as st
 import torch
+import torchaudio
 from TTS.api import TTS
 
-MODEL_REPO = "SYSPIN/tts_vits_coquiai_HindiFemale"
-MODEL_URL = "https://huggingface.co/SYSPIN/tts_vits_coquiai_HindiFemale/blob/main/hi_female_vits_30hrs.pt"
-MODEL_PATH = os.path.join(MODEL_DIR, "hi_female_vits_30hrs.pt")
-CONFIG_PATH = "config.json"
-
-st.set_page_config(page_title="Hindi Female Voice TTS", layout="centered")
-
+# -----------------------------------------------------------------------------
+# Step 1: Define paths and download model automatically if missing
+# -----------------------------------------------------------------------------
 @st.cache_resource
 def load_tts_model():
-    # Ensure model folder exists
-    os.makedirs(MODEL_DIR, exist_ok=True)
+    model_dir = "models"
+    os.makedirs(model_dir, exist_ok=True)
+    model_path = os.path.join(model_dir, "hi_female_vits_30hrs.pt")
+    config_path = os.path.join(model_dir, "config.json")
 
-    # Download model if not found locally
-    if not os.path.exists(MODEL_PATH):
-        with st.spinner("Downloading Hindi Female Voice model (~330MB)..."):
-            from huggingface_hub import hf_hub_download
-            downloaded_file = hf_hub_download(
-                repo_id=MODEL_REPO,
-                filename="pytorch_model.pt",
-                cache_dir=MODEL_DIR
-            )
-            os.rename(downloaded_file, MODEL_PATH)
+    # Hugging Face direct file URLs (from SYSPIN/tts_vits_coquiai_HindiFemale)
+    model_url = "https://huggingface.co/SYSPIN/tts_vits_coquiai_HindiFemale/blob/main/hi_female_vits_30hrs.pt"
+   
 
-    # Load model using Coqui TTS
-    tts = TTS(model_path=MODEL_PATH, config_path=CONFIG_PATH, progress_bar=False, gpu=torch.cuda.is_available())
+    # Download the model if not already present
+    if not os.path.exists(model_path):
+        import requests
+        with st.spinner("Downloading Hindi female TTS model... (may take 2–3 min)"):
+            r = requests.get(model_url)
+            r.raise_for_status()
+            with open(model_path, "wb") as f:
+                f.write(r.content)
+
+    # Download config file if not present
+    if not os.path.exists(config_path):
+        import requests
+        with st.spinner("Downloading configuration..."):
+            r = requests.get(config_url)
+            r.raise_for_status()
+            with open(config_path, "wb") as f:
+                f.write(r.content)
+
+    # Load the model
+    tts = TTS(model_path=model_path, config_path=config_path)
     return tts
 
+# -----------------------------------------------------------------------------
+# Step 2: Streamlit UI
+# -----------------------------------------------------------------------------
 st.title("🎙️ Hindi Female Voice TTS")
-st.write("Type Hindi or Hinglish text below to generate speech in a natural female Hindi voice.")
 
-# Input text
-text_input = st.text_area("Enter text:", placeholder="Namaste! Kaise ho aap?", height=120)
+tts = load_tts_model()
 
-# Button
-if st.button("🔊 Generate Speech"):
-    if not text_input.strip():
-        st.warning("Please enter some text first.")
-    else:
-        tts = load_tts_model()
+text_input = st.text_area("Enter Hindi text:", "नमस्ते! आप कैसी हैं?")
+
+if st.button("Generate Voice"):
+    with st.spinner("Generating speech..."):
+        wav = tts.tts(text_input)
         output_path = "output.wav"
-        with st.spinner("Generating audio..."):
-            tts.tts_to_file(text=text_input, file_path=output_path)
-        st.success("✅ Audio generated successfully!")
-        st.audio(output_path, format="audio/wav")
-
-st.markdown("---")
-st.caption("Powered by Coqui TTS • Model: SYSPIN/tts_vits_coquiai_HindiFemale")
+        torchaudio.save(output_path, torch.tensor([wav]), 22050)
+        st.audio(output_path)
+        st.success("Done! ✅")
