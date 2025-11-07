@@ -1,27 +1,23 @@
 import streamlit as st
-from chatterbox_tts import TTS
+from TTS.api import TTS   # ✅ Correct import
 import tempfile
 import os
 
-# Initialize app
+# Streamlit setup
 st.set_page_config(page_title="Chatterbox TTS – Hindi Female Voice", page_icon="🪔", layout="centered")
 st.title("🪔 Chatterbox TTS – Hindi Female Voice")
 st.markdown("Type text in **Hindi or English**, and listen to a natural-sounding **female Hindi voice** 🎙️")
 
-# Initialize TTS model (Coqui XTTS v2 multilingual)
+# Load TTS model
 @st.cache_resource
 def load_tts_model():
-    tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2")
-    return tts
+    # Coqui multilingual model (includes Hindi)
+    return TTS(model_name="tts_models/multilingual/multi-dataset/xtts_v2")
 
 tts = load_tts_model()
 
 # Text input
 text = st.text_area("Enter your text below:", placeholder="Namaste! Kaise ho aap sab?")
-
-# Voice and language configuration
-language = "hi"  # Hindi
-speaker_wav = None  # Use model's default female Hindi voice
 
 # Generate speech
 if st.button("🎧 Generate Voice"):
@@ -33,21 +29,21 @@ if st.button("🎧 Generate Voice"):
                 tts.tts_to_file(
                     text=text,
                     file_path=tmpfile.name,
-                    speaker_wav=speaker_wav,
-                    language=language
+                    language="hi",  # Hindi
+                    speaker_wav=None  # default female
                 )
+
                 st.audio(tmpfile.name, format="audio/wav")
                 st.success("✅ Voice generated successfully!")
 
-                # Offer download
-                with open(tmpfile.name, "rb") as file:
+                # Download option
+                with open(tmpfile.name, "rb") as f:
                     st.download_button(
-                        label="⬇️ Download Audio",
-                        data=file,
+                        "⬇️ Download Audio",
+                        data=f,
                         file_name="hindi_female_voice.wav",
                         mime="audio/wav"
                     )
 
-# Footer
 st.markdown("---")
 st.markdown("Created with ❤️ using [Coqui TTS](https://github.com/coqui-ai/TTS) and Streamlit.")
