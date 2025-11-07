@@ -1,15 +1,8 @@
-# Core dependencies (install in correct order)
-numpy==1.26.4
-
-# Streamlit UI
+numpy==1.25.2
 streamlit==1.51.0
-
-# Torch ecosystem (compatible with Python 3.10)
-torch==2.3.1
-torchaudio==2.3.1
-
-# Audio handling
+torch==2.6.0
+torchaudio==2.6.0
 soundfile==0.12.1
-
-# Chatterbox TTS (Resemble AI)
 chatterbox-tts==0.1.4
+transformers>=4.44.0
+pydub
