@@ -74,14 +74,13 @@ if st.button("🔊 Generate Speech"):
                 audio = tts_model(input_tensor)
 
             # Save and play
-           # Save and play
-audio = audio.squeeze().cpu()
-output_path = "/tmp/output.wav"
+            audio = audio.squeeze().cpu()
+            output_path = "/tmp/output.wav"
 
-# Save as standard PCM WAV (no TorchCodec required)
-torchaudio.save(output_path, audio.unsqueeze(0), 22050, encoding="PCM_S", bits_per_sample=16)
+            # Save as standard PCM WAV (no TorchCodec required)
+            torchaudio.save(output_path, audio.unsqueeze(0), 22050, encoding="PCM_S", bits_per_sample=16)
 
-st.audio(output_path)
+            st.audio(output_path)
 
         except Exception as e:
             st.error(f"Error generating speech: {e}")
