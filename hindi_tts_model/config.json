@@ -1,0 +1,23 @@
+{
+  "model_name": "SYSPIN/tts_vits_coquiai_HindiFemale",
+  "language": "hi",
+  "use_cuda": false,
+  "num_speakers": 1,
+  "sample_rate": 22050,
+  "text_cleaner": "basic_cleaners",
+  "phoneme_backend": "espeak",
+  "symbols": "basic_hindi",
+  "audio": {
+    "fft_size": 1024,
+    "hop_length": 256,
+    "win_length": 1024,
+    "num_mels": 80,
+    "mel_fmin": 0,
+    "mel_fmax": 8000
+  },
+  "vocoder": {
+    "type": "none"
+  },
+  "output_path": "./outputs",
+  "description": "Lightweight config for Hindi female voice model trained on VITS (Coqui TTS-compatible)."
+}
