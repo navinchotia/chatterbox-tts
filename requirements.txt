@@ -1,3 +1,6 @@
 streamlit
 torch
 torchaudio
+requests
+torchcodec
+
