@@ -5,7 +5,7 @@ import os
 from extra import TTSTokenizer, VitsCharacters, multilingual_cleaners
 
 # Path to your model (downloaded from Hugging Face)
-MODEL_PATH = "hi_female_vits_30hrs.pt"
+MODEL_PATH = "https://huggingface.co/SYSPIN/tts_vits_coquiai_HindiFemale/blob/main/hi_female_vits_30hrs.pt"
 
 # Cache the model to avoid reloading on every interaction
 @st.cache_resource
