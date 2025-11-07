@@ -1,5 +1,5 @@
 streamlit>=1.32.0
 torch>=2.1.0
 TTS>=0.22.0
-numpy>=1.24.0,<1.26.0
 soundfile
+numpy>=1.24.0,<1.26.0
