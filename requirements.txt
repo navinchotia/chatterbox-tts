@@ -5,4 +5,12 @@ torchaudio==2.6.0
 soundfile==0.12.1
 transformers>=4.44.0
 pydub
-chatterbox-tts==0.1.4
+torch==2.6.0
+torchaudio==2.6.0
+transformers==4.44.2
+TTS==0.22.0
+soundfile
+pydub
+numpy
+streamlit==1.51.0
+
