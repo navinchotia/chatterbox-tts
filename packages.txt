@@ -1,2 +1,0 @@
-ffmpeg
-libasound2-dev
