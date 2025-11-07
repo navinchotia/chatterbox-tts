@@ -31,4 +31,38 @@ def load_tts_model():
         st.success("✅ TTS model loaded successfully!")
         return model
     except Exception as e:
-        st.error(f"Error loading m
+        st.error(f"Error loading model: {e}")
+        return None
+
+# ---------------------- Load tokenizer ----------------------
+@st.cache_resource
+def load_tokenizer():
+    try:
+        download_file(CHARS_URL, CHARS_PATH)
+        with open(CHARS_PATH, "r", encoding="utf-8") as f:
+            chars = [line.strip() for line in f if line.strip()]
+        char2idx = {c: i for i, c in enumerate(chars)}
+        idx2char = {i: c for i, c in enumerate(chars)}
+        st.success("✅ Tokenizer loaded successfully!")
+        return char2idx, idx2char
+    except Exception as e:
+        st.error(f"Error loading tokenizer: {e}")
+        return {}, {}
+
+# ---------------------- Convert text to tensor ----------------------
+def text_to_tensor(text, char2idx):
+    tokens = [char2idx.get(ch, char2idx.get("_", 0)) for ch in text]
+    return torch.LongTensor(tokens).unsqueeze(0)
+
+# ---------------------- Streamlit UI ----------------------
+st.title("🎙 Hindi Female Voice TTS")
+st.markdown("Generate natural Hindi speech using a female Hindi voice model.")
+
+tts_model = load_tts_model()
+char2idx, idx2char = load_tokenizer()
+
+text_input = st.text_area("Enter Hindi text:", "नमस्ते! आप कैसी हैं?", height=120)
+
+if st.button("🔊 Generate Speech"):
+    if not tts_model:
+        st.error("TTS model not lo
