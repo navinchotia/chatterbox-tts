@@ -1,33 +1,46 @@
 import streamlit as st
+from TTS.utils.synthesizer import Synthesizer
 import torch
-from extra import download_file
+import os
 
-# URLs for the model, config, and vocoder (example placeholders)
-MODEL_URL = "https://huggingface.co/SYSPIN/tts_vits_coquiai_HindiFemale/resolve/main/hi_female_vits_30hrs.pt"
-CONFIG_URL = "https://huggingface.co/SYSPIN/tts_vits_coquiai_HindiFemale/resolve/main/config.json"
-VOCODER_URL = "https://huggingface.co/SYSPIN/tts_vits_coquiai_HindiFemale/resolve/main/vocoder.pt"
+# ----------------------------
+# Settings
+# ----------------------------
+MODEL_FILE = "hi_female_vits_30hrs.pt"
+CONFIG_FILE = "config.json"
+OUTPUT_DIR = "outputs"
 
-MODEL_DIR = "models"
-MODEL_FILE = download_file(MODEL_URL, f"{MODEL_DIR}/hi_female_vits_30hrs.pt")
-CONFIG_FILE = download_file(CONFIG_URL, f"{MODEL_DIR}/config.json")
-VOCODER_FILE = download_file(VOCODER_URL, f"{MODEL_DIR}/vocoder.pt")
+# Make output folder if it doesn't exist
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-st.title("Hindi Female TTS")
+# ----------------------------
+# Load Model
+# ----------------------------
+@st.cache_resource(show_spinner=True)
+def load_model(model_file=MODEL_FILE, config_file=CONFIG_FILE, device="cpu"):
+    synthesizer = Synthesizer(
+        tts_checkpoint=model_file,
+        tts_config=config_file,
+        use_cuda=(device != "cpu")
+    )
+    return synthesizer
 
-# Example placeholder for loading model
-@st.cache_data
-def load_model(model_file, config_file, vocoder_file, device="cpu"):
-    # Use torch.jit.load or the library-specific load function
-    model = torch.jit.load(model_file, map_location=device)
-    vocoder = torch.jit.load(vocoder_file, map_location=device)
-    return model, vocoder
+device = "cpu"  # Change to "cuda" if GPU is available
+tts = load_model(device=device)
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-model, vocoder = load_model(MODEL_FILE, CONFIG_FILE, VOCODER_FILE, device)
+# ----------------------------
+# Streamlit UI
+# ----------------------------
+st.title("Hindi Female TTS - VITS")
 
-st.text("Model loaded successfully!")
+text_input = st.text_area("Enter text in Hindi or Hinglish", height=150)
 
-text = st.text_input("Enter text to synthesize:", "Namaste, kaise ho?")
 if st.button("Generate Speech"):
-    # Placeholder TTS generation
-    st.audio("path_to_generated_audio.wav")  # Replace with actual TTS call
+    if not text_input.strip():
+        st.warning("Please enter some text.")
+    else:
+        output_file = os.path.join(OUTPUT_DIR, "output.wav")
+        # Generate speech
+        tts.tts_to_file(text=text_input, file_path=output_file)
+        st.audio(output_file, format="audio/wav")
+        st.success("Speech generated successfully!")
