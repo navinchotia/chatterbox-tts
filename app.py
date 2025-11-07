@@ -2,6 +2,13 @@ import os
 import streamlit as st
 import torch
 import torchaudio
+
+# Temporary fix for PyTorch 2.6 "weights_only" issue
+old_load = torch.load
+def fixed_load(*args, **kwargs):
+    kwargs["weights_only"] = False
+    return old_load(*args, **kwargs)
+torch.load = fixed_load
 from TTS.api import TTS
 import requests
 import json
