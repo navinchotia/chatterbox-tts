@@ -1,46 +1,69 @@
 import streamlit as st
-from TTS.utils.synthesizer import Synthesizer
 import torch
-import os
+import requests
+import yaml
+from pathlib import Path
+from TTS.utils.synthesizer import Synthesizer
 
-# ----------------------------
-# Settings
-# ----------------------------
-MODEL_FILE = "hi_female_vits_30hrs.pt"
-CONFIG_FILE = "config.json"
-OUTPUT_DIR = "outputs"
+# GitHub repo base URL
+BASE_URL = "https://raw.githubusercontent.com/utkarsh2299/Fastspeech2_HS/main/hindi/female/model"
 
-# Make output folder if it doesn't exist
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+# Model and config file names in repo
+MODEL_FILE = "model.pth"
+CONFIG_FILE = "config.yaml"
+ENERGY_STATS = "energy_stats.npz"
+FEATS_STATS = "feats_stats.npz"
+PITCH_STATS = "pitch_stats.npz"
 
-# ----------------------------
-# Load Model
-# ----------------------------
-@st.cache_resource(show_spinner=True)
-def load_model(model_file=MODEL_FILE, config_file=CONFIG_FILE, device="cpu"):
+# Directory to cache downloaded files
+CACHE_DIR = Path("cache")
+CACHE_DIR.mkdir(exist_ok=True)
+
+def download_file(filename):
+    url = f"{BASE_URL}/{filename}"
+    local_path = CACHE_DIR / filename
+    if not local_path.exists():
+        r = requests.get(url)
+        r.raise_for_status()
+        with open(local_path, "wb") as f:
+            f.write(r.content)
+    return local_path
+
+@st.cache_data(show_spinner=True)
+def load_model():
+    # Download necessary files
+    model_path = download_file(MODEL_FILE)
+    config_path = download_file(CONFIG_FILE)
+    energy_stats_path = download_file(ENERGY_STATS)
+    feats_stats_path = download_file(FEATS_STATS)
+    pitch_stats_path = download_file(PITCH_STATS)
+
+    # Load config YAML
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)
+
+    # Initialize Synthesizer
     synthesizer = Synthesizer(
-        tts_checkpoint=model_file,
-        tts_config=config_file,
-        use_cuda=(device != "cpu")
+        tts_checkpoint=model_path,
+        tts_config=config_path,
+        use_cuda=False,
+        energy_stats_path=energy_stats_path,
+        pitch_stats_path=pitch_stats_path,
+        feats_stats_path=feats_stats_path
     )
+
     return synthesizer
 
-device = "cpu"  # Change to "cuda" if GPU is available
-tts = load_model(device=device)
-
-# ----------------------------
 # Streamlit UI
-# ----------------------------
-st.title("Hindi Female TTS - VITS")
+st.title("Hindi Female TTS Demo (FastSpeech2)")
 
-text_input = st.text_area("Enter text in Hindi or Hinglish", height=150)
+synthesizer = load_model()
 
-if st.button("Generate Speech"):
-    if not text_input.strip():
-        st.warning("Please enter some text.")
-    else:
-        output_file = os.path.join(OUTPUT_DIR, "output.wav")
-        # Generate speech
-        tts.tts_to_file(text=text_input, file_path=output_file)
-        st.audio(output_file, format="audio/wav")
-        st.success("Speech generated successfully!")
+text = st.text_area("Enter text to synthesize:", height=150)
+
+if st.button("Generate Speech") and text.strip():
+    st.info("Generating...")
+    wav = synthesizer.tts(text)
+    out_file = CACHE_DIR / "output.wav"
+    synthesizer.save_wav(wav, out_file)
+    st.audio(str(out_file), format="audio/wav")
