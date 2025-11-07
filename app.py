@@ -72,20 +72,24 @@ if st.button("🔊 Generate Speech"):
             # Convert text to tensor
             input_tensor = text_to_tensor(text_input, char2idx)
 
-            # Generate audio
+            # Generate audio using the model's forward/infer method
             with torch.no_grad():
-                audio = tts_model(input_tensor)
+                # If your model is TorchScript, sometimes the method is 'forward'
+                # and sometimes 'infer', check the model source
+                if hasattr(tts_model, "infer"):
+                    audio = tts_model.infer(input_tensor)
+                else:
+                    audio = tts_model(input_tensor)
 
             # Ensure audio is 1D float tensor
             audio = audio.squeeze().cpu()
             if audio.ndim != 1:
-                audio = audio.mean(dim=0)  # mix down to mono if needed
+                audio = audio.mean(dim=0)
 
-            # Save as standard PCM WAV (16-bit)
+            # Save as standard WAV without TorchCodec
             output_path = "/tmp/output.wav"
             torchaudio.save(output_path, audio.unsqueeze(0), 22050, encoding="PCM_S", bits_per_sample=16)
 
-            # Play in Streamlit
             st.audio(output_path)
 
         except Exception as e:
