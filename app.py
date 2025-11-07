@@ -70,33 +70,28 @@ if st.button("🔊 Generate Speech"):
         st.error("Tokenizer not loaded. Please check chars.txt file.")
     else:
         try:
+            # Convert text to tensor
             input_tensor = text_to_tensor(text_input, char2idx)
-
-            # ---------------------- Inference ----------------------
+            
+            # Generate audio
             with torch.no_grad():
-                if hasattr(tts_model, "infer"):
-                    audio = tts_model.infer(input_tensor)
-                    if isinstance(audio, tuple):
-                        audio = audio[0]
-                else:
-                    audio = tts_model(input_tensor)
-                    if isinstance(audio, tuple):
-                        audio = audio[0]
+                audio = tts_model(input_tensor)
 
-            # Ensure CPU and 1D
-            audio = audio.squeeze().cpu()
+            # Some TorchScript models return dicts or objects
+            if isinstance(audio, dict) and "wav" in audio:
+                audio = audio["wav"]
 
-            # ---------------------- Save WAV ----------------------
+            # Convert to 1D float tensor and CPU
+            audio = audio.squeeze().cpu().float()
+
+            # Normalize audio to -1.0 .. 1.0 (optional)
+            audio = audio / torch.max(torch.abs(audio))
+
+            # Save as PCM WAV (no torchcodec needed)
             output_path = "/tmp/output.wav"
-            torchaudio.save(
-                output_path,
-                audio.unsqueeze(0),
-                22050,  # model sample rate
-                encoding="PCM_S",
-                bits_per_sample=16
-            )
+            torchaudio.save(output_path, audio.unsqueeze(0), 22050, encoding="PCM_S", bits_per_sample=16)
 
-            st.success("✅ Audio generated successfully!")
+            # Play audio
             st.audio(output_path)
 
         except Exception as e:
