@@ -1,0 +1,6 @@
+streamlit
+torch
+torchaudio
+chatterbox-tts
+soundfile
+numpy
