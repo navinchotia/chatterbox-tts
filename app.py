@@ -17,7 +17,7 @@ CHARS_PATH = os.path.join(MODEL_DIR, "chars.txt")
 def load_tts_model():
     try:
         st.info("Loading Hindi female TTS model... please wait ⏳")
-        model = torch.jit.load(MODE_PATH, map_location="cpu")
+        model = torch.jit.load(MODEL_PATH, map_location="cpu")
         model.eval()
         st.success("✅ Model loaded successfully!")
         return model
