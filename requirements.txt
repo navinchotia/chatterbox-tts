@@ -1,14 +1,7 @@
-n# --- Base numeric library (must install first) ---
 numpy==1.25.2
-
-# --- Core Streamlit app ---
 streamlit==1.51.0
-
-# --- PyTorch ecosystem ---
 torch==2.6.0
 torchaudio==2.6.0
-
-# --- Audio + TTS ---
 soundfile==0.12.1
 chatterbox-tts==0.1.4
 transformers>=4.44.0
