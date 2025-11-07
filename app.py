@@ -1,52 +1,46 @@
 import streamlit as st
-import requests
+from huggingface_hub import hf_hub_download
 from TTS.api import TTS
 import os
 
-# ---------------------------
-# Download model from Hugging Face
-# ---------------------------
-MODEL_URL = "https://huggingface.co/SYSPIN/tts_vits_coquiai_HindiFemale/resolve/main/hi_female_vits_30hrs.pt"
+# -----------------------------
+# Config: Hugging Face model
+# -----------------------------
+REPO_ID = "SYSPIN/tts_vits_coquiai_HindiFemale"
 MODEL_FILE = "hi_female_vits_30hrs.pt"
 
-if not os.path.exists(MODEL_FILE):
-    with st.spinner("Downloading TTS model..."):
-        r = requests.get(MODEL_URL, stream=True)
-        total_length = r.headers.get('content-length')
-
-        with open(MODEL_FILE, "wb") as f:
-            if total_length is None:
-                f.write(r.content)
-            else:
-                dl = 0
-                total_length = int(total_length)
-                for data in r.iter_content(chunk_size=4096):
-                    dl += len(data)
-                    f.write(data)
-                    st.progress(min(dl / total_length, 1.0))
-
-# ---------------------------
-# Load the model
-# ---------------------------
+# -----------------------------
+# Load model with caching
+# -----------------------------
 @st.cache_resource
-def load_model(model_path):
-    tts = TTS(model_path, progress_bar=False, gpu=False)
+def load_model():
+    # Download model from Hugging Face hub at runtime
+    model_path = hf_hub_download(repo_id=REPO_ID, filename=MODEL_FILE)
+    # Load TTS model locally
+    tts = TTS(model_path=model_path, progress_bar=False, gpu=False)
     return tts
 
-tts = load_model(MODEL_FILE)
-
-# ---------------------------
+# -----------------------------
 # Streamlit UI
-# ---------------------------
-st.title("Hindi TTS with Coqui VITS")
-text_input = st.text_area("Enter text to synthesize:", "")
+# -----------------------------
+st.title("Chatterbox TTS - Hindi Female Voice")
 
-if st.button("Generate Audio"):
-    if text_input.strip() == "":
-        st.warning("Please enter some text first.")
+tts = load_model()
+
+text = st.text_area("Enter text to synthesize", "Namaste! Aap kaise hain?")
+
+if st.button("Generate Speech"):
+    if not text.strip():
+        st.warning("Please enter some text to synthesize!")
     else:
-        with st.spinner("Generating speech..."):
-            audio_path = "output.wav"
-            tts.tts_to_file(text=text_input, file_path=audio_path)
-            st.audio(audio_path, format="audio/wav")
-            st.success("Done!")
+        audio_path = "output.wav"
+        try:
+            tts.tts_to_file(text=text, file_path=audio_path)
+            st.success("Audio generated successfully!")
+            st.audio(audio_path)
+        except Exception as e:
+            st.error(f"Error generating speech: {e}")
+
+# Optional: clean up old audio files
+if os.path.exists("output.wav"):
+    os.remove("output.wav")
