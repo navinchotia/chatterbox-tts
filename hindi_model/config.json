@@ -6,6 +6,7 @@
   "iterator_type": "sequence",
   "output_dir": "exp/tts_train_fastspeech2_raw_char_None",
   "ngpu": 1,
+  "generator_model": "fastspeech2_hindi_female.pt",
   "seed": 0,
   "num_workers": 1,
   "num_att_plot": 3,
