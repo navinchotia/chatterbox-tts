@@ -1,10 +1,15 @@
-# install numpy first to avoid pkuseg build error
+# Core dependencies (install in correct order)
 numpy==1.26.4
+
+# Streamlit UI
 streamlit==1.51.0
+
+# Torch ecosystem (compatible with Python 3.10)
 torch==2.3.1
 torchaudio==2.3.1
+
+# Audio handling
 soundfile==0.12.1
 
-# chatterbox-tts relies on pkuseg which fails to build on 3.13, 
-# so we’ll install it only if successful
-chatterbox-tts==0.1.4; python_version < "3.12"
+# Chatterbox TTS (Resemble AI)
+chatterbox-tts==0.1.4
