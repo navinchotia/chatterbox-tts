@@ -15,7 +15,7 @@ MODEL_FILE = "hi_female_vits_30hrs.pt"
 @st.cache_resource
 def load_model():
     # Download model from Hugging Face hub at runtime
-    model_path = hf_hub_download(repo_id=REPO_ID, filename=MODEL_FILE)
+    model_path = "https://huggingface.co/SYSPIN/tts_vits_coquiai_HindiFemale/blob/main/"
     # Load TTS model locally
     tts = TTS(model_path=model_path, progress_bar=False, gpu=False)
     return tts
