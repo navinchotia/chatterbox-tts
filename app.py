@@ -65,4 +65,39 @@ text_input = st.text_area("Enter Hindi text:", "नमस्ते! आप क�
 
 if st.button("🔊 Generate Speech"):
     if not tts_model:
-        st.error("TTS model not lo
+        st.error("TTS model not loaded. Please check the download.")
+    elif not char2idx:
+        st.error("Tokenizer not loaded. Please check chars.txt file.")
+    else:
+        try:
+            input_tensor = text_to_tensor(text_input, char2idx)
+
+            # ---------------------- Inference ----------------------
+            with torch.no_grad():
+                if hasattr(tts_model, "infer"):
+                    audio = tts_model.infer(input_tensor)
+                    if isinstance(audio, tuple):
+                        audio = audio[0]
+                else:
+                    audio = tts_model(input_tensor)
+                    if isinstance(audio, tuple):
+                        audio = audio[0]
+
+            # Ensure CPU and 1D
+            audio = audio.squeeze().cpu()
+
+            # ---------------------- Save WAV ----------------------
+            output_path = "/tmp/output.wav"
+            torchaudio.save(
+                output_path,
+                audio.unsqueeze(0),
+                22050,  # model sample rate
+                encoding="PCM_S",
+                bits_per_sample=16
+            )
+
+            st.success("✅ Audio generated successfully!")
+            st.audio(output_path)
+
+        except Exception as e:
+            st.error(f"Error generating speech: {e}")
