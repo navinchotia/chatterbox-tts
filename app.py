@@ -13,8 +13,7 @@ st.markdown("Type text in **Hindi or English**, and listen to a natural-sounding
 def load_tts_model():
     # Coqui multilingual model (includes Hindi) -     return TTS(model_name="tts_models/multilingual/multi-dataset/xtts_v2")
     # Coqui only Hindi l model
-    return TTS(model_name="tts_models/hi/mai_female/vits")
-
+    return TTS(model_name="tts_models/hi/cvit/hindi")
 
 
 tts = load_tts_model()
