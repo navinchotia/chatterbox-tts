@@ -1,3 +1,2 @@
-ffmpeg
-libasound2-dev
-
+build-essential
+python3-dev
