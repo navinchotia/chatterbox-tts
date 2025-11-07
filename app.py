@@ -69,17 +69,23 @@ if st.button("🔊 Generate Speech"):
         st.error("Tokenizer not loaded. Please check chars.txt file.")
     else:
         try:
+            # Convert text to tensor
             input_tensor = text_to_tensor(text_input, char2idx)
+
+            # Generate audio
             with torch.no_grad():
                 audio = tts_model(input_tensor)
 
-            # Save and play
+            # Ensure audio is 1D float tensor
             audio = audio.squeeze().cpu()
-            output_path = "/tmp/output.wav"
+            if audio.ndim != 1:
+                audio = audio.mean(dim=0)  # mix down to mono if needed
 
-            # Save as standard PCM WAV (no TorchCodec required)
+            # Save as standard PCM WAV (16-bit)
+            output_path = "/tmp/output.wav"
             torchaudio.save(output_path, audio.unsqueeze(0), 22050, encoding="PCM_S", bits_per_sample=16)
 
+            # Play in Streamlit
             st.audio(output_path)
 
         except Exception as e:
