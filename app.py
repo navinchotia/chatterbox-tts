@@ -1,66 +1,47 @@
-import os
-import streamlit as st
 import torch
 import torchaudio
+import streamlit as st
+import os
 
-# Temporary fix for PyTorch 2.6 "weights_only" issue
-old_load = torch.load
-def fixed_load(*args, **kwargs):
-    kwargs["weights_only"] = False
-    return old_load(*args, **kwargs)
-torch.load = fixed_load
-from TTS.api import TTS
-import requests
-import json
+# --------------------------
+# Model path and setup
+# --------------------------
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "huggingface", "hi_female_vits_30hrs.pt")
 
 @st.cache_resource
 def load_tts_model():
-    model_dir = "models"
-    os.makedirs(model_dir, exist_ok=True)
-    model_path = os.path.join(model_dir, "hi_female_vits_30hrs.pt")
-    config_path = os.path.join(model_dir, "config.json")
+    st.info("Loading Hindi female TTS model… please wait ⏳")
+    model = torch.jit.load(MODEL_PATH, map_location="cpu")
+    model.eval()
+    return model
 
-    model_url = "https://huggingface.co/SYSPIN/tts_vits_coquiai_HindiFemale/resolve/main/hi_female_vits_30hrs.pt"
+tts_model = load_tts_model()
 
-    # Download model if missing
-    if not os.path.exists(model_path):
-        with st.spinner("📦 Downloading Hindi female TTS model... This will take a few minutes."):
-            r = requests.get(model_url)
-            r.raise_for_status()
-            with open(model_path, "wb") as f:
-                f.write(r.content)
+# --------------------------
+# TTS generation
+# --------------------------
+def synthesize_speech(text, output_path="output.wav"):
+    # Preprocessing might depend on the model, so this is generic
+    with torch.no_grad():
+        # Model expects tokenized text (depends on how it was traced)
+        # Many Hindi VITS models use phonemes internally, so try plain text first
+        audio = tts_model(text)
+        if isinstance(audio, tuple):
+            audio = audio[0]
+        audio = audio.squeeze().cpu()
+        torchaudio.save(output_path, audio.unsqueeze(0), 22050)
+    return output_path
 
-    # Create config.json if missing
-    if not os.path.exists(config_path):
-        st.warning("⚙️ No config found, creating minimal config.json automatically...")
-        config = {
-            "model": "vits",
-            "num_chars": 200,
-            "num_speakers": 1,
-            "output_sample_rate": 22050,
-            "phoneme_language": "hi",
-            "run_name": "hi_female_vits_30hrs",
-            "use_cuda": False
-        }
-        with open(config_path, "w", encoding="utf-8") as f:
-            json.dump(config, f, ensure_ascii=False, indent=2)
-
-    # Load model
-    tts = TTS(model_path=model_path, config_path=config_path)
-    return tts
-
-
-# -------------------------- Streamlit UI --------------------------
+# --------------------------
+# Streamlit UI
+# --------------------------
 st.title("🎙 Hindi Female Voice TTS")
 
-tts = load_tts_model()
-
-text_input = st.text_area("Enter Hindi text:", "नमस्ते! आप कैसी हैं?")
-
-if st.button("🎧 Generate Voice"):
-    with st.spinner("Generating speech..."):
-        wav = tts.tts(text_input)
-        output_path = "output.wav"
-        torchaudio.save(output_path, torch.tensor([wav]), 22050)
-        st.audio(output_path)
+text = st.text_area("Enter Hindi text:", "नमस्ते! आप कैसी हैं?")
+if st.button("Generate Audio"):
+    try:
+        output_file = synthesize_speech(text)
+        st.audio(output_file)
         st.success("✅ Speech generated successfully!")
+    except Exception as e:
+        st.error(f"Error generating speech: {e}")
