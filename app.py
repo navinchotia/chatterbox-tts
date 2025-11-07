@@ -1,46 +1,90 @@
 import streamlit as st
-from huggingface_hub import hf_hub_download
-from TTS.api import TTS
-import os
+import torch
+import json
+import requests
+from scipy.io.wavfile import write
+from io import BytesIO
+from pathlib import Path
 
-# -----------------------------
-# Config: Hugging Face model
-# -----------------------------
-REPO_ID = "SYSPIN/tts_vits_coquiai_HindiFemale"
-MODEL_FILE = "hi_female_vits_30hrs.pt"
+# -------------------
+# Helper functions
+# -------------------
 
-# -----------------------------
-# Load model with caching
-# -----------------------------
+@st.cache_data
+def download_file(url, local_path):
+    """Download a file from URL if it does not exist locally"""
+    local_path = Path(local_path)
+    if not local_path.exists():
+        st.info(f"Downloading {url}...")
+        r = requests.get(url)
+        r.raise_for_status()
+        local_path.write_bytes(r.content)
+    return str(local_path)
+
+@st.cache_data
+def load_config(config_path):
+    with open(config_path, "r") as f:
+        config = json.load(f)
+    return config
+
 @st.cache_resource
-def load_model():
-    # Download model from Hugging Face hub at runtime
-    model_path = hf_hub_download(repo_id=REPO_ID, filename=MODEL_FILE)
-    # Load TTS model locally
-    tts = TTS(model_path=model_path, progress_bar=False, gpu=False)
-    return tts
+def load_model(model_url, config_url, device="cpu"):
+    # Download files
+    MODEL_FILE = download_file(model_url, "fastspeech2_hindi_female.pt")
+    CONFIG_FILE = download_file(config_url, "config.json")
+    
+    config = load_config(CONFIG_FILE)
+    
+    # Dynamic imports from model repo
+    import sys
+    sys.path.append("model")  # assuming code expects this structure
+    from model import model as model_module
+    from model import utils as utils_module
+    from model import vocoder as vocoder_module
 
-# -----------------------------
+    model = model_module.FastSpeech2(config)
+    checkpoint = torch.load(MODEL_FILE, map_location=device)
+    model.load_state_dict(checkpoint['model'])
+    model.to(device)
+    model.eval()
+    
+    processor = utils_module.TextProcessor(config)
+    
+    return model, processor, vocoder_module
+
+def synthesize(model, processor, vocoder_module, text, device="cpu"):
+    tokens = processor.text_to_sequence(text)
+    tokens = torch.LongTensor(tokens).unsqueeze(0).to(device)
+    
+    with torch.no_grad():
+        mel_outputs, _, _ = model(tokens)
+    
+    # Convert mel spectrogram to waveform
+    audio = vocoder_module.vocoder_infer(mel_outputs)
+    return audio
+
+# -------------------
 # Streamlit UI
-# -----------------------------
-st.title("Chatterbox TTS - Hindi Female Voice")
+# -------------------
 
-tts = load_model()
+st.title("Hindi Female TTS - FastSpeech2")
+st.write("Type your Hindi text below (in Hindi script or transliteration):")
+input_text = st.text_area("Text", "नमस्ते, आप कैसे हैं?")
 
-text = st.text_area("Enter text to synthesize", "Namaste! Aap kaise hain?")
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+# Direct URLs from GitHub raw content
+MODEL_URL = "https://raw.githubusercontent.com/utkarsh2299/Fastspeech2_HS/main/hindi/female/model/fastspeech2_hindi_female.pt"
+CONFIG_URL = "https://raw.githubusercontent.com/utkarsh2299/Fastspeech2_HS/main/hindi/female/model/config.json"
+
+# Load model
+model, processor, vocoder_module = load_model(MODEL_URL, CONFIG_URL, device=device)
 
 if st.button("Generate Speech"):
-    if not text.strip():
-        st.warning("Please enter some text to synthesize!")
-    else:
-        audio_path = "output.wav"
-        try:
-            tts.tts_to_file(text=text, file_path=audio_path)
-            st.success("Audio generated successfully!")
-            st.audio(audio_path)
-        except Exception as e:
-            st.error(f"Error generating speech: {e}")
-
-# Optional: clean up old audio files
-if os.path.exists("output.wav"):
-    os.remove("output.wav")
+    audio = synthesize(model, processor, vocoder_module, input_text, device=device)
+    
+    # Save temporary WAV
+    output_path = "output.wav"
+    write(output_path, 22050, audio)  # adjust sample rate if needed
+    st.audio(output_path, format="audio/wav")
+    st.success("Speech generated!")
