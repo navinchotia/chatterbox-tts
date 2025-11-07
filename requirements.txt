@@ -1,6 +1,7 @@
 streamlit
 torch
 torchaudio
-requests
+TTS @ git+https://github.com/coqui-ai/TTS.git
+numpy
+scipy
 torchcodec
-
