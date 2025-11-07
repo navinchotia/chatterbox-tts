@@ -1,57 +1,53 @@
 import streamlit as st
 import torch
+import torchaudio
+import os
 from extra import TTSTokenizer, VitsCharacters, multilingual_cleaners
 
-# -------------------------------
-# Load TorchScript model
-# -------------------------------
-@st.cache_resource(show_spinner=True)
-def load_model(model_path: str):
-    # Load TorchScript
+# Path to your model (downloaded from Hugging Face)
+MODEL_PATH = "hi_female_vits_30hrs.pt"
+
+# Cache the model to avoid reloading on every interaction
+@st.cache_resource
+def load_model(model_path):
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Model file not found at {model_path}")
     model = torch.jit.load(model_path, map_location="cpu")
-    
-    # Load tokenizer/vocab from extra.py
-    # Use default config for now; adapt if you have saved config
+    model.eval()
+    # Initialize tokenizer
     characters = VitsCharacters()
     tokenizer = TTSTokenizer(multilingual_cleaners, characters)
-    
     return model, tokenizer
 
-# -------------------------------
-# Safe text -> IDs
-# -------------------------------
-def encode_text_safe(text, tokenizer):
-    token_ids = []
-    for char in text:
-        try:
-            idx = tokenizer.characters.char_to_id(char)
-            token_ids.append(idx)
-        except KeyError:
-            token_ids.append(tokenizer.blank_id)
-    token_ids = tokenizer.intersperse_blank_char(token_ids, use_blank_char=True)
-    return torch.LongTensor([token_ids])  # add batch dim
+# Function to generate speech
+def synthesize_speech(model, tokenizer, text, output_path="output.wav"):
+    # Tokenize the text
+    text_ids = tokenizer.text_to_ids(text)
+    input_tensor = torch.tensor([text_ids], dtype=torch.int64)
+    
+    with torch.no_grad():
+        # Forward pass through the model
+        wav = model(input_tensor)[0]  # Assuming model returns waveform as first element
 
-# -------------------------------
+    # Normalize waveform to [-1, 1]
+    wav = wav.squeeze().cpu()
+    wav = wav / torch.max(torch.abs(wav))
+    
+    # Save to wav
+    torchaudio.save(output_path, wav.unsqueeze(0), 22050)
+    return output_path
+
 # Streamlit UI
-# -------------------------------
-st.title("Hindi TTS with TorchScript VITS")
-st.write("Enter Hindi text:")
+st.title("Hindi TTS with Coqui VITS Female Voice")
+st.write("Enter Hindi text and generate speech:")
 
-text_input = st.text_area("Text", value="नमस्ते, आप कैसे हैं?")
+text_input = st.text_area("Enter text here:", value="नमस्ते, आप कैसे हैं?")
 
-# Replace with path to your downloaded TorchScript model
-model_path = "https://huggingface.co/SYSPIN/tts_vits_coquiai_HindiFemale/blob/main/hi_female_vits_30hrs.pt"
-model, tokenizer = load_model(model_path)
-
-if st.button("Generate Audio"):
-    if not text_input.strip():
-        st.warning("Please enter some text!")
-    else:
-        input_ids = encode_text_safe(text_input, tokenizer)
-        try:
-            with torch.no_grad():
-                # TorchScript forward
-                audio = model(input_ids)[0].cpu().numpy()  # adjust depending on model output
-            st.audio(audio, format="audio/wav")
-        except RuntimeError as e:
-            st.error(f"Error generating speech: {e}")
+if st.button("Generate Speech"):
+    try:
+        model, tokenizer = load_model(MODEL_PATH)
+        output_file = synthesize_speech(model, tokenizer, text_input)
+        st.audio(output_file)
+        st.success(f"Speech generated and saved as {output_file}")
+    except Exception as e:
+        st.error(f"Error generating speech: {e}")
